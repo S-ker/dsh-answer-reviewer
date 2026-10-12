@@ -3,6 +3,8 @@
 
 # dsh-answer-reviewer
 
+[Русский · README.ru.md](./README.ru.md) — Русская версия документации.
+
 A dsh host plugin: every time the agent is about to close a turn, the
 plugin extracts the assistant's final user-facing text and asks a dedicated
 review model to grade it on a 1-100 scale. If the score is below the

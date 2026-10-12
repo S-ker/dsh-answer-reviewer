@@ -230,29 +230,22 @@ test('extractAssistantText skips interrupted messages', () => {
 })
 
 test('extractUserPrompts concatenates user-source messages, drops plugin injections', () => {
+  // Session format v4: the message (with its producer-owned `source`) lives
+  // directly on `data`, not under `data.message`.
   const events = [
     {
       type: 'user/message',
-      data: {
-        message: { content: [{ type: 'text', text: 'first user question' }] },
-        source: { kind: 'user' },
-      },
+      data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'first user question' }] },
       seq: 0,
     },
     {
       type: 'user/message',
-      data: {
-        message: { content: [{ type: 'text', text: 'AGENTS.md context' }] },
-        source: { kind: 'plugin', plugin: 'dsh-context' },
-      },
+      data: { source: { kind: 'dsh-context' }, content: [{ type: 'text', text: 'AGENTS.md context' }] },
       seq: 1,
     },
     {
       type: 'user/message',
-      data: {
-        message: { content: [{ type: 'text', text: 'second user question' }] },
-        source: { kind: 'user' },
-      },
+      data: { source: { kind: 'user' }, content: [{ type: 'text', text: 'second user question' }] },
       seq: 2,
     },
   ]
@@ -267,7 +260,7 @@ test('extractUserPrompts returns null when no real user prompts exist', () => {
   const events = [
     {
       type: 'user/message',
-      data: { message: { content: [{ type: 'text', text: 'noise' }] }, source: { kind: 'plugin' } },
+      data: { source: { kind: 'plugin' }, content: [{ type: 'text', text: 'noise' }] },
       seq: 0,
     },
   ]
@@ -359,8 +352,8 @@ test('isScoreAcceptable honours threshold', () => {
 test('buildSteerMessage renders score, reason, and the retry position', () => {
   const m = buildSteerMessage({ score: 42, reason: 'mentions rm -rf', attempt: 1, maxAttempts: 5 })
   ok(m.role === 'user', 'role user')
-  ok(m.source && m.source.kind === 'plugin', 'source plugin')
-  ok(m.source.plugin === 'dsh-answer-reviewer', 'plugin id')
+  ok(m.source && m.source.kind === 'dsh-answer-reviewer', 'producer-owned source kind')
+  ok(m.source.plugin === undefined, 'no legacy plugin field')
   const text = m.content[0].text
   ok(text.includes('42/100'), 'score rendered')
   ok(text.includes('mentions rm -rf'), 'reason listed')
@@ -393,7 +386,7 @@ test('buildReviewPrompt carries both user prompts and assistant reply', () => {
   ok(block.text.includes('<reply>'), 'reply section')
   ok(block.text.includes('is the macOS ssh helper buggy'), 'user prompt carried')
   ok(block.text.includes('no, it works fine'), 'reply carried')
-  ok(p.messages[0].source.plugin === 'dsh-answer-reviewer', 'source plugin id')
+  ok(p.messages[0].source.kind === 'dsh-answer-reviewer', 'producer-owned source kind')
 })
 
 test('buildReviewPrompt falls back when userPrompts is empty', () => {
